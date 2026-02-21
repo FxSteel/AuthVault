@@ -4,7 +4,16 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'AuthVault — 2FA Authenticator',
   description: 'Autenticador TOTP seguro para tus cuentas',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'AuthVault' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'AuthVault',
+  },
+  icons: {
+    icon: '/favicon-32.png',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -18,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
       </head>
       <body>{children}</body>
     </html>
