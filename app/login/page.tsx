@@ -43,15 +43,15 @@ export default function LoginPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{
-            width: '64px', height: '64px',
-            background: 'linear-gradient(135deg, #00e5ff, #7c3aed)',
-            borderRadius: '18px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '32px',
-            margin: '0 auto 16px',
-            boxShadow: '0 0 30px rgba(0,229,255,0.3)',
-          }}>🔐</div>
+          <img src="/icon-192.png" alt="AuthVault"
+            style={{
+              width: '64px', height: '64px',
+              borderRadius: '18px',
+              margin: '0 auto 16px',
+              display: 'block',
+              boxShadow: '0 0 30px rgba(0,229,255,0.3)',
+            }}
+          />
           <h1 style={{
             fontSize: '28px', fontWeight: 800,
             color: '#e2e8f0', letterSpacing: '-0.5px',

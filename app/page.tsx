@@ -220,7 +220,6 @@ export default function HomePage() {
     padding:'12px 16px',color:'#e2e8f0',fontFamily:'var(--font-mono)',fontSize:14,outline:'none',
   }
 
-  // Slugs únicos disponibles para el selector
   const uniqueSlugs = ['default', ...Array.from(new Set(Object.values(SLUG_MAP)))]
 
   return (
@@ -233,9 +232,10 @@ export default function HomePage() {
         background:'rgba(8,12,16,0.92)',backdropFilter:'blur(12px)',zIndex:100,
       }}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:36,height:36,background:'linear-gradient(135deg,#00e5ff,#7c3aed)',
-            borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',
-            fontSize:18,boxShadow:'0 0 20px rgba(0,229,255,0.15)'}}>🔐</div>
+          <img src="/icon-192.png" alt="AuthVault" style={{
+            width:36,height:36,borderRadius:10,
+            boxShadow:'0 0 20px rgba(0,229,255,0.15)',
+          }}/>
           <span style={{fontSize:18,fontWeight:800,color:'#e2e8f0',letterSpacing:-0.5,fontFamily:'var(--font-syne)'}}>
             Auth<span style={{color:'#00e5ff'}}>Vault</span>
           </span>
@@ -258,11 +258,12 @@ export default function HomePage() {
       <div style={{padding:'16px 20px 0',display:'flex',flexDirection:'column',gap:12}}>
         {loading ? (
           <div style={{textAlign:'center',padding:'60px 0',color:'#64748b'}}>
-            <div style={{fontSize:32,marginBottom:12,opacity:0.4}}>⏳</div>Cargando...
+            <img src="/icon-192.png" alt="AuthVault" style={{width:48,height:48,borderRadius:12,opacity:0.4,marginBottom:12}}/>
+            <div>Cargando...</div>
           </div>
         ) : filtered.length===0 ? (
           <div style={{textAlign:'center',padding:'80px 20px',color:'#64748b'}}>
-            <div style={{fontSize:48,marginBottom:16,opacity:0.4}}>{search?'🔍':'🔐'}</div>
+            <img src="/icon-192.png" alt="AuthVault" style={{width:64,height:64,borderRadius:16,opacity:0.3,marginBottom:16,display:'block',margin:'0 auto 16px'}}/>
             <h3 style={{fontSize:18,fontWeight:600,color:'#e2e8f0',opacity:0.5,marginBottom:8,fontFamily:'var(--font-syne)'}}>
               {search?'Sin resultados':'Sin cuentas'}
             </h3>
@@ -284,13 +285,11 @@ export default function HomePage() {
                   <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{acc.name}</div>
                 </div>
               </div>
-              <div style={{display:'flex',gap:6}}>
-                <button onClick={()=>handleDelete(acc.id)} style={{
-                  background:'none',border:'1px solid #1e2d3d',borderRadius:8,
-                  width:30,height:30,cursor:'pointer',fontSize:14,color:'#64748b',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                }} title="Eliminar">🗑️</button>
-              </div>
+              <button onClick={()=>handleDelete(acc.id)} style={{
+                background:'none',border:'1px solid #1e2d3d',borderRadius:8,
+                width:30,height:30,cursor:'pointer',fontSize:14,color:'#64748b',
+                display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
+              }} title="Eliminar">🗑️</button>
             </div>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               {acc.secret && acc.secret!=='ERROR'
