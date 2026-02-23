@@ -259,8 +259,12 @@ export default function HomePage() {
     const {error} = await supabase.from('accounts')
       .update({name:eName, issuer:eIssuer, icon_slug:eSlug})
       .eq('id', editAccount.id)
-    if (error) { showToast('Error al guardar'); setESaving(false); return }
-    setAccounts(p=>p.map(a=>a.id===editAccount.id ? {...a,name:eName,issuer:eIssuer,icon_slug:eSlug} : a))
+      .eq('user_id', user!.id)
+    if (error) { showToast('Error: ' + error.message); setESaving(false); return }
+    setAccounts(p=>p.map(a=>a.id===editAccount.id
+      ? {...a, name:eName, issuer:eIssuer, icon_slug:eSlug}
+      : a
+    ))
     setEditAccount(null); setESaving(false)
     showToast('✓ Cuenta actualizada')
   }
