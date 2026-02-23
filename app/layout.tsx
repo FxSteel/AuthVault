@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -16,16 +16,12 @@ export const metadata: Metadata = {
   },
 }
 
-export const viewport: Viewport = {
-  themeColor: '#080c10',
-  width: 'device-width',
-  initialScale: 1,
-}
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+        <meta name="theme-color" content="#080c10"/>
         <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
       </head>
