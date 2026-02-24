@@ -287,7 +287,7 @@ export default function HomePage() {
 
   const loadJsQR = (): Promise<void> => {
     return new Promise((resolve) => {
-      // @ts-ignore
+      // @ts-expect-error global injected by jsQR script
       if (window.jsQR) { resolve(); return }
       const script = document.createElement('script')
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
@@ -300,12 +300,33 @@ export default function HomePage() {
     setFormError('')
     try {
       await loadJsQR()
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      })
+      let stream: MediaStream | null = null
+      const preferredVideoConstraints: MediaTrackConstraints = {
+        facingMode: { exact: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        // Helps mobile cameras keep QR sharp while scanning.
+        // @ts-expect-error browser support varies
+        focusMode: 'continuous',
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: preferredVideoConstraints,
+          audio: false,
+        })
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        })
+      }
       setCameraStream(stream)
       const video = videoRef.current
-      if (!video) return
+      if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
       video.srcObject = stream
       video.setAttribute('playsinline', 'true')
       video.setAttribute('muted', 'true')
@@ -319,7 +340,7 @@ export default function HomePage() {
         if (!ctx) return
         ctx.drawImage(v, 0, 0)
         const imgData = ctx.getImageData(0, 0, c.width, c.height)
-        // @ts-ignore
+        // @ts-expect-error global injected by jsQR script
         const code = window.jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' })
         if (code?.data) { clearInterval(qrTimer.current!); stopCamera(); parseUri(code.data) }
       }, 250)
