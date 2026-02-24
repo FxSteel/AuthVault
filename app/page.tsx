@@ -299,35 +299,26 @@ export default function HomePage() {
   const startCamera = async () => {
     setFormError('')
     try {
+      stopCamera()
       await loadJsQR()
-      let stream: MediaStream | null = null
-      const preferredVideoConstraints: MediaTrackConstraints = {
-        facingMode: { exact: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        // Helps mobile cameras keep QR sharp while scanning.
-        // @ts-expect-error browser support varies
-        focusMode: 'continuous',
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setFormError('Tu navegador no soporta acceso a cámara.')
+        return
       }
+      let stream: MediaStream | null = null
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: preferredVideoConstraints,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         })
       } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        })
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       }
       setCameraStream(stream)
       const video = videoRef.current
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
       video.srcObject = stream
+      video.muted = true
       video.setAttribute('playsinline', 'true')
       video.setAttribute('muted', 'true')
       await video.play()
@@ -344,7 +335,9 @@ export default function HomePage() {
         const code = window.jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' })
         if (code?.data) { clearInterval(qrTimer.current!); stopCamera(); parseUri(code.data) }
       }, 250)
-    } catch { setFormError('No se pudo acceder a la cámara. Verifica los permisos.') }
+    } catch {
+      setFormError('No se pudo abrir la cámara. Verifica permisos del sitio y usa HTTPS.')
+    }
   }
 
   const stopCamera = () => {
