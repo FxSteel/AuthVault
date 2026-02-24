@@ -345,6 +345,14 @@ export default function HomePage() {
     if (qrTimer.current) clearInterval(qrTimer.current)
   }
 
+  useEffect(() => {
+    if (showModal && modalTab === 'qr') {
+      if (!scanning) void startCamera()
+      return
+    }
+    stopCamera()
+  }, [showModal, modalTab])
+
   const parseUri = (uri:string) => {
     try {
       const url=new URL(uri); if (url.protocol!=='otpauth:') throw new Error()
@@ -630,13 +638,20 @@ export default function HomePage() {
                   </>}
                   {!scanning&&<>
                     <div style={{fontSize:40,opacity:0.4}}>📷</div>
-                    <div>Toca para activar la cámara</div>
+                    <div>Abriendo cámara...</div>
                     <div style={{fontSize:12}}>Apunta al código QR de tu servicio</div>
                   </>}
                 </div>
                 {formError&&<div style={{marginTop:12,background:'rgba(239,68,68,0.1)',
                   border:'1px solid rgba(239,68,68,0.3)',borderRadius:10,padding:'10px 14px',
                   fontSize:13,color:'#ef4444'}}>{formError}</div>}
+                {!scanning&&(
+                  <button onClick={startCamera} style={{
+                    width:'100%',padding:12,marginTop:8,background:'none',
+                    border:'1px solid #1e2d3d',borderRadius:14,color:'#64748b',
+                    fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'var(--font-syne)',
+                  }}>Reintentar cámara</button>
+                )}
                 <button onClick={()=>{stopCamera();setModalTab('manual')}} style={{
                   width:'100%',padding:12,marginTop:8,background:'none',
                   border:'1px solid #1e2d3d',borderRadius:14,color:'#64748b',
