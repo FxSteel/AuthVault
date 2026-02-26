@@ -341,19 +341,26 @@ export default function HomePage() {
       }
 
       setCameraStream(stream)
-      const video = videoRef.current
-      if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
-      video.srcObject = stream
-      // iOS requiere propiedades y atributos para autoplay inline
-      video.muted = true
-      video.autoplay = true
-      ;(video as any).playsInline = true
-      video.setAttribute('playsinline', 'true')
-      video.setAttribute('muted', 'true')
-      await video.play()
+      // En iOS el <video> debe ser visible (display:block) cuando se asigna el stream y se hace play(),
+      // si no la imagen no se pinta aunque la cámara esté activa. Primero mostramos el área de escaneo.
       setScanning(true)
 
       let isDetecting = false
+
+      // Asignar stream y play() en el siguiente frame, cuando el video ya está visible en el DOM.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const video = videoRef.current
+          if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
+          video.srcObject = stream
+          video.muted = true
+          video.autoplay = true
+          ;(video as any).playsInline = true
+          video.setAttribute('playsinline', 'true')
+          video.setAttribute('muted', 'true')
+          video.play().catch(() => {})
+        })
+      })
 
       qrTimer.current = setInterval(() => {
         const v = videoRef.current
