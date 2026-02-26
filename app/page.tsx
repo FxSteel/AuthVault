@@ -301,6 +301,20 @@ export default function HomePage() {
     try {
       stopCamera()
 
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setFormError('Tu navegador no soporta acceso a cámara.')
+        return
+      }
+
+      // iOS Safari exige que getUserMedia se invoque de forma síncrona dentro del gesto del usuario.
+      // No hacer ningún await antes de esta llamada; luego ya se puede await loadJsQR, etc.
+      const streamPromise = navigator.mediaDevices
+        .getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: false }))
+
       // Preferir BarcodeDetector nativo si está disponible; si no, usar jsQR como fallback.
       const NativeBarcodeDetector = (window as any).BarcodeDetector
       let barcodeDetector: any = null
@@ -320,19 +334,10 @@ export default function HomePage() {
         await loadJsQR()
       }
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setFormError('Tu navegador no soporta acceso a cámara.')
+      const stream = await streamPromise
+      if (!stream) {
+        setFormError('No se pudo acceder a la cámara.')
         return
-      }
-
-      let stream: MediaStream | null = null
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        })
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       }
 
       setCameraStream(stream)
@@ -392,8 +397,13 @@ export default function HomePage() {
           parseUri(code.data)
         }
       }, 250)
-    } catch {
-      setFormError('No se pudo abrir la cámara. Verifica permisos del sitio y usa HTTPS.')
+    } catch (err: unknown) {
+      const name = err instanceof Error ? err.name : ''
+      if (name === 'NotAllowedError' || (err as Error)?.message?.includes('Permission')) {
+        setFormError('Permiso de cámara denegado. Actívalo en ajustes del navegador o del dispositivo.')
+      } else {
+        setFormError('No se pudo abrir la cámara. Usa HTTPS y verifica permisos.')
+      }
     }
   }
 
@@ -675,14 +685,20 @@ export default function HomePage() {
 
             {modalTab==='qr'&&(
               <div>
-                <div onClick={!scanning?startCamera:undefined} style={{
-                  width:'100%',aspectRatio:'1',background:'#111820',borderRadius:16,
-                  border:`2px dashed ${scanning?'#00e5ff':'#1e2d3d'}`,
-                  display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-                  gap:12,color:'#64748b',fontSize:14,position:'relative',overflow:'hidden',
-                  cursor:scanning?'default':'pointer',
-                }}>
-                  <video ref={videoRef} autoPlay playsInline style={{
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={!scanning ? startCamera : undefined}
+                  onKeyDown={!scanning ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startCamera() } } : undefined}
+                  style={{
+                    width:'100%',aspectRatio:'1',background:'#111820',borderRadius:16,
+                    border:`2px dashed ${scanning?'#00e5ff':'#1e2d3d'}`,
+                    display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+                    gap:12,color:'#64748b',fontSize:14,position:'relative',overflow:'hidden',
+                    cursor:scanning?'default':'pointer',
+                  }}
+                >
+                  <video ref={videoRef} autoPlay playsInline muted style={{
                     position:'absolute',inset:0,width:'100%',height:'100%',
                     objectFit:'cover',borderRadius:14,display:scanning?'block':'none',
                   }}/>
@@ -695,7 +711,7 @@ export default function HomePage() {
                   </>}
                   {!scanning&&<>
                     <div style={{fontSize:40,opacity:0.4}}>📷</div>
-                    <div>Abriendo cámara...</div>
+                    <div style={{fontWeight:600,color:'#e2e8f0'}}>Toca para abrir la cámara</div>
                     <div style={{fontSize:12}}>Apunta al código QR de tu servicio</div>
                   </>}
                 </div>
@@ -703,11 +719,15 @@ export default function HomePage() {
                   border:'1px solid rgba(239,68,68,0.3)',borderRadius:10,padding:'10px 14px',
                   fontSize:13,color:'#ef4444'}}>{formError}</div>}
                 {!scanning&&(
-                  <button onClick={startCamera} style={{
-                    width:'100%',padding:12,marginTop:8,background:'none',
-                    border:'1px solid #1e2d3d',borderRadius:14,color:'#64748b',
-                    fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'var(--font-syne)',
-                  }}>Reintentar cámara</button>
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    style={{
+                      width:'100%',padding:14,marginTop:12,background:'rgba(0,229,255,0.12)',
+                      border:'1px solid rgba(0,229,255,0.4)',borderRadius:14,color:'#00e5ff',
+                      fontSize:15,fontWeight:600,cursor:'pointer',fontFamily:'var(--font-syne)',
+                    }}
+                  >Abrir cámara</button>
                 )}
                 <button onClick={()=>{stopCamera();setModalTab('manual')}} style={{
                   width:'100%',padding:12,marginTop:8,background:'none',
