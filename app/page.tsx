@@ -300,11 +300,31 @@ export default function HomePage() {
     setFormError('')
     try {
       stopCamera()
-      await loadJsQR()
+
+      // Preferir BarcodeDetector nativo si está disponible; si no, usar jsQR como fallback.
+      const NativeBarcodeDetector = (window as any).BarcodeDetector
+      let barcodeDetector: any = null
+      let useBarcodeDetector = false
+
+      if (NativeBarcodeDetector) {
+        try {
+          barcodeDetector = new NativeBarcodeDetector({ formats: ['qr_code'] })
+          useBarcodeDetector = true
+        } catch {
+          barcodeDetector = null
+          useBarcodeDetector = false
+        }
+      }
+
+      if (!useBarcodeDetector) {
+        await loadJsQR()
+      }
+
       if (!navigator.mediaDevices?.getUserMedia) {
         setFormError('Tu navegador no soporta acceso a cámara.')
         return
       }
+
       let stream: MediaStream | null = null
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -314,6 +334,7 @@ export default function HomePage() {
       } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       }
+
       setCameraStream(stream)
       const video = videoRef.current
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
@@ -323,17 +344,50 @@ export default function HomePage() {
       video.setAttribute('muted', 'true')
       await video.play()
       setScanning(true)
+
+      let isDetecting = false
+
       qrTimer.current = setInterval(() => {
-        const v = videoRef.current, c = canvasRef.current
+        const v = videoRef.current
+        const c = canvasRef.current
         if (!v || !c || v.readyState < 2 || v.videoWidth === 0) return
-        c.width = v.videoWidth; c.height = v.videoHeight
+
+        // Camino 1: BarcodeDetector nativo
+        if (useBarcodeDetector && barcodeDetector && !isDetecting) {
+          isDetecting = true
+          barcodeDetector.detect(v).then((codes: any[]) => {
+            const value =
+              codes?.[0]?.rawValue ??
+              codes?.[0]?.rawValueText ??
+              codes?.[0]?.rawValueString ??
+              codes?.[0]?.rawValueDecoded
+
+            if (value) {
+              if (qrTimer.current) clearInterval(qrTimer.current)
+              stopCamera()
+              parseUri(value)
+            }
+          }).finally(() => {
+            isDetecting = false
+          })
+          return
+        }
+
+        // Camino 2 (fallback): jsQR desde CDN
+        c.width = v.videoWidth
+        c.height = v.videoHeight
         const ctx = c.getContext('2d', { willReadFrequently: true })
         if (!ctx) return
         ctx.drawImage(v, 0, 0)
         const imgData = ctx.getImageData(0, 0, c.width, c.height)
-        // @ts-expect-error global injected by jsQR script
-        const code = window.jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' })
-        if (code?.data) { clearInterval(qrTimer.current!); stopCamera(); parseUri(code.data) }
+        const jsQR = (window as any).jsQR
+        if (!jsQR) return
+        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' })
+        if (code?.data) {
+          if (qrTimer.current) clearInterval(qrTimer.current)
+          stopCamera()
+          parseUri(code.data)
+        }
       }, 250)
     } catch {
       setFormError('No se pudo abrir la cámara. Verifica permisos del sitio y usa HTTPS.')
