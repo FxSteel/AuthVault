@@ -339,7 +339,10 @@ export default function HomePage() {
       const video = videoRef.current
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return }
       video.srcObject = stream
+      // iOS requiere propiedades y atributos para autoplay inline
       video.muted = true
+      video.autoplay = true
+      ;(video as any).playsInline = true
       video.setAttribute('playsinline', 'true')
       video.setAttribute('muted', 'true')
       await video.play()
@@ -400,11 +403,11 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (showModal && modalTab === 'qr') {
-      if (!scanning) void startCamera()
-      return
+    // En móvil algunos navegadores requieren un gesto directo del usuario para abrir la cámara.
+    // Aquí solo nos aseguramos de cerrar la cámara al salir del modal o cambiar de pestaña.
+    if (!(showModal && modalTab === 'qr')) {
+      stopCamera()
     }
-    stopCamera()
   }, [showModal, modalTab])
 
   const parseUri = (uri:string) => {
