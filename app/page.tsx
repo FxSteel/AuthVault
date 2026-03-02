@@ -15,14 +15,20 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SLUG_MAP: Record<string,string> = {
   google:'google', gmail:'google', github:'github', meta:'meta',
   facebook:'meta', instagram:'instagram', twitter:'twitter', x:'twitter',
-  discord:'discord', amazon:'amazon', microsoft:'microsoft', apple:'apple',
+  discord:'discord', amazon:'amazon', brex:'brex', microsoft:'microsoft', apple:'apple',
   supabase:'supabase', stripe:'stripe', netflix:'netflix', linkedin:'linkedin',
   slack:'slack', notion:'notion', figma:'figma', dropbox:'dropbox',
   twitch:'twitch', spotify:'spotify', paypal:'paypal', cloudflare:'cloudflare'
 }
 
+function normalizeSlug(slug?: string | null) {
+  if (!slug) return 'default'
+  const normalized = slug.trim().toLowerCase()
+  return normalized || 'default'
+}
+
 function getIconUrl(slug: string) {
-  return `${SUPABASE_URL}/storage/v1/object/public/app-icons/${slug}.png`
+  return `${SUPABASE_URL}/storage/v1/object/public/app-icons/${normalizeSlug(slug)}.png`
 }
 
 function guessSlug(issuer: string) {
@@ -31,6 +37,12 @@ function guessSlug(issuer: string) {
     if (k.includes(key)) return val
   }
   return 'default'
+}
+
+function resolveAccountSlug(slug: string, issuer: string) {
+  const normalized = normalizeSlug(slug)
+  if (normalized !== 'default') return normalized
+  return guessSlug(issuer)
 }
 
 function TimerRing({ remaining }: { remaining: number }) {
@@ -52,7 +64,8 @@ function TimerRing({ remaining }: { remaining: number }) {
 
 function AppIcon({ slug, size=40 }: { slug: string; size?: number }) {
   const [errored, setErrored] = useState(false)
-  const src = errored ? getIconUrl('default') : getIconUrl(slug)
+  const resolvedSlug = normalizeSlug(slug)
+  const src = errored ? getIconUrl('default') : getIconUrl(resolvedSlug)
   return (
     <div style={{
       width:size, height:size, borderRadius:12, border:'1px solid #1e2d3d',
@@ -226,8 +239,9 @@ export default function HomePage() {
     const {data,error} = await supabase.from('accounts').select('*').order('created_at',{ascending:false})
     if (error) { showToast('Error cargando cuentas'); setLoading(false); return }
     const dec = await Promise.all((data||[]).map(async (a:Account) => {
-      try { return {...a, secret: await decryptSecret(a.secret_encrypted, user!.email)} }
-      catch { return {...a, secret:'ERROR'} }
+      const slug = normalizeSlug(a.icon_slug)
+      try { return {...a, secret: await decryptSecret(a.secret_encrypted, user!.email), icon_slug: slug} }
+      catch { return {...a, secret:'ERROR', icon_slug: slug} }
     }))
     setAccounts(dec); setLoading(false)
   }
@@ -249,20 +263,21 @@ export default function HomePage() {
     setEditAccount(acc)
     setEName(acc.name)
     setEIssuer(acc.issuer)
-    setESlug(acc.icon_slug)
+    setESlug(normalizeSlug(acc.icon_slug))
     setSwipedId(null)
   }
 
   const handleEdit = async () => {
     if (!editAccount) return
     setESaving(true)
+    const slugToSave = normalizeSlug(eSlug)
     const {error} = await supabase.from('accounts')
-      .update({name:eName, issuer:eIssuer, icon_slug:eSlug})
+      .update({name:eName, issuer:eIssuer, icon_slug:slugToSave})
       .eq('id', editAccount.id)
       .eq('user_id', user!.id)
     if (error) { showToast('Error: ' + error.message); setESaving(false); return }
     setAccounts(p=>p.map(a=>a.id===editAccount.id
-      ? {...a, name:eName, issuer:eIssuer, icon_slug:eSlug}
+      ? {...a, name:eName, issuer:eIssuer, icon_slug:slugToSave}
       : a
     ))
     setEditAccount(null); setESaving(false)
@@ -276,11 +291,12 @@ export default function HomePage() {
     if (!secret) { setFormError('La clave secreta es obligatoria'); setSaving(false); return }
     try { await generateTOTP(secret) } catch { setFormError('Clave secreta inválida (Base32)'); setSaving(false); return }
     const secret_encrypted = await encryptSecret(secret, user!.email)
+    const slugToSave = normalizeSlug(selectedSlug)
     const {data:inserted,error} = await supabase.from('accounts')
-      .insert({name:fName,issuer:fIssuer,secret_encrypted,icon_slug:selectedSlug,user_id:user!.id})
+      .insert({name:fName,issuer:fIssuer,secret_encrypted,icon_slug:slugToSave,user_id:user!.id})
       .select().single()
     if (error) { setFormError('Error: '+error.message); setSaving(false); return }
-    setAccounts(p=>[{...inserted,secret},...p])
+    setAccounts(p=>[{...inserted,secret,icon_slug:slugToSave},...p])
     setShowModal(false); setFName(''); setFIssuer(''); setFSecret(''); setSelectedSlug('default')
     showToast('✓ Cuenta agregada'); setSaving(false)
   }
@@ -530,7 +546,7 @@ export default function HomePage() {
                   style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',userSelect:'none'}}
                 >
                   <div style={{display:'flex',alignItems:'center',gap:12}}>
-                    <AppIcon slug={acc.icon_slug} size={40}/>
+                    <AppIcon slug={resolveAccountSlug(acc.icon_slug, acc.issuer)} size={40}/>
                     <div>
                       <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0',fontFamily:'var(--font-syne)'}}>{acc.issuer||acc.name}</div>
                       <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{acc.name}</div>
